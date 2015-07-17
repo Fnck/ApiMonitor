@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:jaxrs="http://cxf.apache.org/jaxrs"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:cxf="http://cxf.apache.org/core"
+       xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="
+       http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+       http://cxf.apache.org/jaxrs http://cxf.apache.org/schemas/jaxrs.xsd
+       http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd
+       http://cxf.apache.org/core http://cxf.apache.org/schemas/core.xsd 
+       http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd">
+
+    <import resource="classpath:META-INF/cxf/cxf.xml"/>
+    <import resource="classpath:META-INF/cxf/cxf-servlet.xml"/>
+    
+    <context:component-scan base-package="com.stubhub.demo.api.webservice.impl"/>
+    <!-- 
+	<cxf:bus>
+        <cxf:outInterceptors>
+            <ref bean="contextOutInterceptor"/>
+        </cxf:outInterceptors>
+    </cxf:bus>
+     
+    <bean id="cors-filter" class="org.apache.cxf.rs.security.cors.CrossOriginResourceSharingFilter"/>
+    <bean id="cors-server" scope="prototype" 
+          class="org.apache.cxf.systest.jaxrs.cors.AnnotatedCorsServer" />
+    -->
+	<!-- cxf 2.6.1 have to define the address apparently -->
+    <jaxrs:server id="apiMonitorServerBean" address="/">
+        <!-- Mapping to the real business beans -->
+        <jaxrs:serviceBeans>
+            <ref bean="apiMonitorService"/>
+        </jaxrs:serviceBeans>
+		<jaxrs:extensionMappings>
+			<entry key="xml" value="application/xml" />
+			<entry key="json" value="application/json" />
+		</jaxrs:extensionMappings>
+		<jaxrs:providers>
+			<ref bean="jsonProvider"/>
+			<ref bean="jaxbProvider"/> 
+			<bean class="org.apache.cxf.jaxrs.ext.search.SearchContextProvider"/>
+			<bean class="org.apache.cxf.jaxrs.model.wadl.WadlGenerator">
+			    <property name="linkJsonToXmlSchema" value="true"/>
+    			<property name="useJaxbContextForQnames" value="true"/> 
+    			<property name="ignoreMessageWriters" value="true"/> 
+     			<property name="addResourceAndMethodIds" value="true"/>
+     			<property name="namespacePrefix" value="ns" />
+			</bean>
+    	</jaxrs:providers>	
+	    <jaxrs:inInterceptors>
+	       <bean class="org.apache.cxf.jaxrs.provider.jsonp.JsonpInInterceptor"/>
+	    </jaxrs:inInterceptors>
+	    <jaxrs:outInterceptors>
+	       <bean class="org.apache.cxf.jaxrs.provider.jsonp.JsonpPreStreamInterceptor"/>
+	       <bean class="org.apache.cxf.jaxrs.provider.jsonp.JsonpPostStreamInterceptor"/>
+	       <!-- <ref bean="contextOutInterceptor"/> -->
+	    </jaxrs:outInterceptors>     	
+    </jaxrs:server>
+    
+    <bean id="jaxbProvider" class="org.apache.cxf.jaxrs.provider.JAXBElementProvider">
+		<property name="marshallerProperties" ref="propertiesMap"/>
+	</bean>
+	<util:map id="propertiesMap">
+		<entry key="jaxb.formatted.output">
+		   <value type="java.lang.Boolean">true</value>
+		</entry>
+	</util:map>
+
+  	<bean id="jsonProvider" class="org.codehaus.jackson.jaxrs.JacksonJsonProvider">
+		<property name="mapper">
+        	<bean class="org.codehaus.jackson.map.ObjectMapper">
+                <property name="serializationConfig.dateFormat">
+                  <bean class="java.text.SimpleDateFormat">
+                    <constructor-arg value="yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"/>
+                  </bean>
+                </property>
+                <property name="deserializationConfig.dateFormat">
+                  <bean class="java.text.SimpleDateFormat">
+                    <constructor-arg value="yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"/>
+                  </bean>
+                </property>
+                <property name="serializationInclusion" value="NON_NULL"/>
+            </bean>
+         </property>  	
+  	</bean>
+  	
+ 	<bean class="org.springframework.beans.factory.config.MethodInvokingFactoryBean">
+		<property name="targetObject"><ref local="jsonProvider"/></property>
+		<property name="targetMethod"><value>configure</value></property>
+		<property name="arguments">
+	   		<list>
+	       		<util:constant static-field="org.codehaus.jackson.map.SerializationConfig$Feature.WRAP_ROOT_VALUE"/>
+	       		<value type="boolean">true</value>
+	   		</list>
+		</property>
+	</bean>
+	 
+	<bean class="org.springframework.beans.factory.config.MethodInvokingFactoryBean">
+		<property name="targetObject"><ref local="jsonProvider"/></property>
+		<property name="targetMethod"><value>configure</value></property>
+		<property name="arguments">
+	   		<list>
+	       		<util:constant static-field="org.codehaus.jackson.map.DeserializationConfig$Feature.UNWRAP_ROOT_VALUE"/>
+	       		<value type="boolean">true</value>
+	   		</list>
+		</property>
+	</bean>
+	
+ 	<bean class="org.springframework.beans.factory.config.MethodInvokingFactoryBean">
+		<property name="targetObject"><ref local="jsonProvider"/></property>
+		<property name="targetMethod"><value>configure</value></property>
+		<property name="arguments">
+	   		<list>
+	       		<util:constant static-field="org.codehaus.jackson.map.DeserializationConfig$Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY"/>
+	       		<value type="boolean">true</value>
+	   		</list>
+		</property>
+	</bean>
+	
+</beans>
